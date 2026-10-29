@@ -278,8 +278,8 @@ const S = { notas: [], itens: [], periodos: [], semNota: [] };
 /* ---------- Utilidades ---------- */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const brl = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const numBR = s => { s = String(s ?? '').trim(); if (!s) return 0; if (/,/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); return Number(s) || 0; };
+const numBR = s => { if (typeof s === 'number') return isFinite(s) ? s : 0; s = String(s ?? '').replace(/R\$/g, '').trim(); if (!s) return 0; if (/,/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); return Number(s) || 0; };
+const brl = v => 'R$ ' + numBR(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const dataBR = d => { if (!d) return ''; const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : d; };
 const pad = n => String(n || '').padStart(2, '0');
 const periodoNome = id => (S.periodos.find(p => p.id === id) || {}).nome || '';
@@ -385,7 +385,7 @@ function renderPainel() {
   const blocos = PROJETOS.map(p => {
     const ns = S.notas.filter(n => n.projeto === p);
     const completas = ns.filter(n => !pendencias(n).length).length;
-    const total = ns.reduce((s, n) => s + Number(n.valor || 0), 0);
+    const total = ns.reduce((s, n) => s + numBR(n.valor), 0);
     const pct = ns.length ? Math.round(completas / ns.length * 100) : 0;
     const porDoc = DOCS.map(([k, rot]) => [rot, ns.filter(n => statusDoc(n, k) === 'falta').length]).filter(x => x[1]);
     return `<div class="bloco projeto">
@@ -462,7 +462,7 @@ function desenharNotas() {
       <td>${TIPO_CURTO[n.categoria]}${n.pessoa ? ` (${n.pessoa})` : ''}</td>
       <td>${pad(n.numero)} - ${esc(n.empresa)}</td><td>${esc(n.nf)}</td><td>${dataBR(n.data)}</td>
       <td class="num">${brl(n.valor)}</td><td>${chips(n)}</td></tr>`).join('')}</tbody></table></div>
-    <p class="rotulo" style="margin-top:10px">${lista.length} nota(s), ${brl(lista.reduce((s, n) => s + Number(n.valor || 0), 0))}</p>`
+    <p class="rotulo" style="margin-top:10px">${lista.length} nota(s), ${brl(lista.reduce((s, n) => s + numBR(n.valor), 0))}</p>`
     : '<p class="vazio">Nenhuma nota com esses filtros.</p>';
   $('#tabNotas').querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => abrirDetalhe(tr.dataset.id));
 }
@@ -486,7 +486,7 @@ function camposLocal(n, pref) {
 function camposDados(n, pref) {
   return `<div class="grade">
       <label class="campo">Nome da empresa na pasta<input name="${pref}empresa" value="${esc(n.empresa)}" placeholder="Ex.: GGotuzzo" required></label>
-      <label class="campo">Valor total da nota (R$)<input name="${pref}valor" inputmode="decimal" value="${n.valor ? Number(n.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}" placeholder="0,00"></label>
+      <label class="campo">Valor total da nota (R$)<input name="${pref}valor" inputmode="decimal" value="${n.valor ? numBR(n.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}" placeholder="0,00"></label>
       <label class="campo">Número da NF<input name="${pref}nf" value="${esc(n.nf)}"></label>
       <label class="campo">Data da nota<input type="date" name="${pref}data" value="${esc(n.data)}"></label>
     </div>
@@ -884,7 +884,7 @@ function baixarCsv() {
   const cel = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const linhas = [['Projeto', 'Item', 'Qtde', 'Tipo de material', 'Data da compra', 'Nota Fiscal', 'Empresa', 'Pasta', 'Valor da nota']]
     .concat(linhasInventario().map(({ i, n }) => [n.projeto, i.descricao, i.qtde, TIPO_CURTO[n.categoria], dataBR(n.data), n.nf,
-      n.razaoSocial || n.empresa, nomePasta(n), Number(n.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })]));
+      n.razaoSocial || n.empresa, nomePasta(n), numBR(n.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })]));
   const blob = new Blob(['\ufeff' + linhas.map(l => l.map(cel).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'inventario.csv'; a.click();
 }
