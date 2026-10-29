@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prestação de Contas – NCTBio FO/UFPel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ---------- Tokens ---------- */
+:root {
+  --vinho: #8C1C2B;
+  --vinho-escuro: #5E111C;
+  --vinho-claro: #F7E8EA;
+  --tinta: #261A1C;
+  --tinta-suave: #6B5A5D;
+  --fundo: #F5F2F3;
+  --papel: #FFFFFF;
+  --linha: #E5DADC;
+  --ok: #2E7A4E; --ok-fundo: #E5F2EA;
+  --falta: #A3600A; --falta-fundo: #FBEFD9;
+  --na: #7B7375; --na-fundo: #EEEAEB;
+  --raio: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --vinho: #C9475A; --vinho-escuro: #4A0F18; --vinho-claro: #3A1E23;
+    --tinta: #F1E8E9; --tinta-suave: #B9A9AC; --fundo: #1A1416; --papel: #241C1E; --linha: #3D3134;
+    --ok: #7CCB9B; --ok-fundo: #1E3328; --falta: #E7B05C; --falta-fundo: #3A2C15; --na: #A79DA0; --na-fundo: #2F2729;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fundo); color: var(--tinta); font-size: 15px; line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--vinho); }
+:focus-visible { outline: 3px solid var(--vinho); outline-offset: 2px; }
+.oculto { display: none !important; }
+
+/* ---------- Cabeçalho ---------- */
+header.topo {
+  background: var(--vinho-escuro); color: #fff;
+  display: flex; align-items: center; gap: 14px; padding: 12px 24px;
+}
+@media (prefers-color-scheme: light) { header.topo { background: var(--vinho); } }
+header.topo img { height: 40px; width: auto; background: #fff; border-radius: 6px; padding: 3px; }
+header.topo .titulo { line-height: 1.2; }
+header.topo .titulo strong { display: block; font-size: 18px; font-weight: 700; }
+header.topo .titulo span { font-size: 13px; opacity: .85; }
+header.topo .acoes { margin-left: auto; display: flex; gap: 8px; }
+header.topo .acoes button {
+  background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5);
+  border-radius: 6px; padding: 6px 12px; cursor: pointer;
+}
+header.topo .acoes button:hover { background: rgba(255,255,255,.12); }
+
+nav.abas { background: var(--papel); border-bottom: 1px solid var(--linha); padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
+nav.abas button {
+  background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 14px;
+  cursor: pointer; color: var(--tinta-suave); font-weight: 600; white-space: nowrap;
+}
+nav.abas button[aria-selected="true"] { color: var(--vinho); border-bottom-color: var(--vinho); }
+
+main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+h2 { font-size: 22px; margin: 0 0 4px; }
+h3 { font-size: 16px; margin: 0 0 10px; }
+.sub { color: var(--tinta-suave); margin: 0 0 20px; }
+
+/* ---------- Login ---------- */
+#login { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+#login form { background: var(--papel); border: 1px solid var(--linha); border-top: 6px solid var(--vinho); border-radius: var(--raio); padding: 32px; width: min(380px, 100%); }
+#login img { height: 56px; margin-bottom: 12px; }
+#login h1 { font-size: 20px; margin: 0 0 4px; }
+#login p { color: var(--tinta-suave); margin: 0 0 20px; }
+
+/* ---------- Formulários ---------- */
+label.campo { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-suave); margin-bottom: 12px; }
+label.campo input, label.campo select, label.campo textarea {
+  display: block; width: 100%; margin-top: 4px; padding: 9px 10px;
+  border: 1px solid var(--linha); border-radius: 6px; background: var(--papel); font-weight: 400; color: var(--tinta);
+}
+.grade { display: grid; gap: 0 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.botao {
+  background: var(--vinho); color: #fff; border: 0; border-radius: 6px; padding: 10px 18px;
+  font-weight: 600; cursor: pointer;
+}
+.botao:hover { filter: brightness(1.08); }
+.botao:disabled { opacity: .55; cursor: wait; }
+.botao.sec { background: transparent; color: var(--vinho); border: 1px solid var(--vinho); }
+.botao.peq { padding: 5px 10px; font-size: 13px; }
+.escolha { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px; }
+.escolha label { cursor: pointer; }
+.escolha input { position: absolute; opacity: 0; pointer-events: none; }
+.escolha span { display: inline-block; padding: 7px 14px; border: 1px solid var(--linha); border-radius: 999px; background: var(--papel); }
+.escolha input:checked + span { background: var(--vinho); color: #fff; border-color: var(--vinho); }
+.escolha input:focus-visible + span { outline: 3px solid var(--vinho); outline-offset: 2px; }
+.rotulo { font-size: 13px; font-weight: 600; color: var(--tinta-suave); }
+.erro { color: #B3261E; font-weight: 600; }
+@media (prefers-color-scheme: dark) { .erro { color: #FF8A80; } }
+
+/* ---------- Blocos ---------- */
+.bloco { background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio); padding: 20px; margin-bottom: 20px; }
+.projetos { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.projeto h3 { display: flex; justify-content: space-between; align-items: baseline; }
+.projeto h3 small { color: var(--tinta-suave); font-weight: 500; }
+.barra { height: 10px; border-radius: 999px; background: var(--falta-fundo); overflow: hidden; margin: 10px 0 6px; }
+.barra div { height: 100%; background: var(--ok); }
+.numeros { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 12px; }
+.numeros div strong { display: block; font-size: 20px; }
+.numeros div span { font-size: 13px; color: var(--tinta-suave); }
+
+/* ---------- Caminho da pasta ---------- */
+.caminho {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  background: var(--vinho-claro); border-left: 4px solid var(--vinho); border-radius: 6px;
+  padding: 12px 14px; margin: 4px 0 18px; font-size: 14px;
+}
+.caminho span { white-space: nowrap; }
+.caminho span + span::before { content: "/"; color: var(--tinta-suave); margin-right: 4px; }
+.caminho span:last-child { font-weight: 700; color: var(--vinho); white-space: normal; }
+
+/* ---------- Tabelas ---------- */
+.rolagem { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--papel); }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--linha); vertical-align: top; }
+th { font-size: 13px; color: var(--tinta-suave); font-weight: 600; background: var(--papel); position: sticky; top: 0; }
+tbody tr.clicavel { cursor: pointer; }
+tbody tr.clicavel:hover { background: var(--vinho-claro); }
+td.num { text-align: right; white-space: nowrap; }
+.filtros { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: end; }
+.filtros select, .filtros input { padding: 8px 10px; border: 1px solid var(--linha); border-radius: 6px; background: var(--papel); }
+.filtros input[type=search] { flex: 1; min-width: 200px; }
+
+/* ---------- Checklist ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; font-weight: 600; }
+.chip.ok { background: var(--ok-fundo); color: var(--ok); }
+.chip.falta { background: var(--falta-fundo); color: var(--falta); }
+.chip.na { background: var(--na-fundo); color: var(--na); text-decoration: line-through; font-weight: 500; }
+.docs { list-style: none; margin: 0; padding: 0; }
+.docs li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--linha); }
+.docs li .nome { flex: 1; min-width: 140px; font-weight: 600; }
+.docs li label.na { font-size: 13px; color: var(--tinta-suave); display: flex; gap: 4px; align-items: center; }
+
+/* ---------- Itens ---------- */
+.itens td input { width: 100%; padding: 6px 8px; border: 1px solid var(--linha); border-radius: 4px; background: var(--papel); }
+.itens td.q { width: 90px; }
+.itens td.x { width: 40px; }
+.remover { background: none; border: 0; cursor: pointer; color: var(--tinta-suave); font-size: 18px; }
+
+/* ---------- Envio de arquivo ---------- */
+.solta {
+  border: 2px dashed var(--linha); border-radius: var(--raio); padding: 28px; text-align: center;
+  background: var(--papel); cursor: pointer;
+}
+.solta.ativa { border-color: var(--vinho); background: var(--vinho-claro); }
+.solta strong { display: block; font-size: 16px; }
+.solta span { color: var(--tinta-suave); font-size: 14px; }
+.anexos-lista { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; }
+.anexos-lista li { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+
+/* ---------- Diálogo ---------- */
+dialog { border: 0; border-radius: var(--raio); padding: 0; width: min(860px, 96vw); background: var(--papel); color: var(--tinta); }
+dialog::backdrop { background: rgba(30, 10, 14, .55); }
+dialog .cab { display: flex; align-items: start; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--linha); }
+dialog .cab h3 { margin: 0; font-size: 18px; }
+dialog .cab button { margin-left: auto; }
+dialog .corpo { padding: 18px 22px; max-height: 72vh; overflow-y: auto; }
+dialog .rodape { padding: 14px 22px; border-top: 1px solid var(--linha); display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+#aviso {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--tinta); color: var(--papel); padding: 10px 18px; border-radius: 8px; z-index: 99; max-width: 90vw;
+}
+.vazio { text-align: center; color: var(--tinta-suave); padding: 30px; }
+@media (max-width: 640px) {
+  main { padding: 16px; }
+  header.topo { padding: 10px 14px; }
+  header.topo .titulo span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<section id="login">
+  <form id="formLogin">
+    <img src="logo.png" alt="NCTBio" onerror="this.remove()">
+    <h1>Prestação de Contas</h1>
+    <p>NCTBio, Faculdade de Odontologia da UFPel</p>
+    <label class="campo">Senha
+      <input type="password" id="senha" inputmode="numeric" autocomplete="current-password" required>
+    </label>
+    <button class="botao" style="width:100%">Entrar</button>
+    <p id="erroLogin" class="erro" style="margin:12px 0 0"></p>
+  </form>
+</section>
+
+<!-- ===================== APP ===================== -->
+<div id="app" class="oculto">
+  <header class="topo">
+    <img src="logo.png" alt="" onerror="this.remove()">
+    <div class="titulo"><strong>Prestação de Contas</strong><span>NCTBio, FO/UFPel</span></div>
+    <div class="acoes">
+      <button id="btSync" title="Busca pastas e arquivos adicionados direto no Drive">Sincronizar com o Drive</button>
+      <button id="btSair">Sair</button>
+    </div>
+  </header>
+  <nav class="abas" role="tablist">
+    <button role="tab" data-aba="painel" aria-selected="true">Pendências</button>
+    <button role="tab" data-aba="notas">Notas</button>
+    <button role="tab" data-aba="nova">Nova nota</button>
+    <button role="tab" data-aba="inventario">Inventário</button>
+  </nav>
+  <main>
+    <section id="aba-painel"></section>
+    <section id="aba-notas" class="oculto"></section>
+    <section id="aba-nova" class="oculto"></section>
+    <section id="aba-inventario" class="oculto"></section>
+  </main>
+</div>
+
+<dialog id="detalhe"></dialog>
+<div id="aviso" class="oculto" role="status"></div>
+
+<script>
+/* =================================================================
+   CONFIGURAÇÃO: cole aqui a URL do App da Web do Apps Script
+   ================================================================= */
+const API_URL = 'https://script.google.com/macros/s/AKfycbwH-MGoFyQ13j-Q8O1XSVw1_hFC_NPHNB-flBXD2dK_aN9OYO2DtGDKGuh19RIY2T1jjA/exec';
+
+/* ---------- Constantes ---------- */
+const PROJETOS = ['CNPq', 'FAPERGS'];
+const RAIZ = { CNPq: 'Compras CNPq', FAPERGS: 'Compras FAPERGS' };
+const CATEGORIAS = {
+  CNPq: { consumo: '01 - Custeio', permanente: '02 - Capital', servico: '03 - Serviços' },
+  FAPERGS: { consumo: '01 - Materiais de consumo', permanente: '02 - Materiais permanentes', servico: '03 - Serviços' }
+};
+const TIPO_CURTO = { consumo: 'Consumo', permanente: 'Permanente', servico: 'Serviço' };
+const PESSOA = { PF: 'Pessoa Física', PJ: 'Pessoa Jurídica' };
+const DOCS = [['nf', 'Nota fiscal'], ['boleto', 'Boleto'], ['comprovante', 'Comprovante de pagamento'],
+              ['orcamento', 'Orçamentos'], ['carta', 'Carta de exclusividade']];
+const DOC_CURTO = { nf: 'NF', boleto: 'Boleto', comprovante: 'Comprovante', orcamento: 'Orçamentos', carta: 'Carta' };
+
+let SENHA = '';
+const S = { notas: [], itens: [], periodos: [], semNota: [] };
+
+/* ---------- Utilidades ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const brl = v => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const numBR = s => { s = String(s ?? '').trim(); if (!s) return 0; if (/,/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); return Number(s) || 0; };
+const dataBR = d => { if (!d) return ''; const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : d; };
+const pad = n => String(n || '').padStart(2, '0');
+const periodoNome = id => (S.periodos.find(p => p.id === id) || {}).nome || '';
+const arq = n => { try { return JSON.parse(n.arquivos || '{}'); } catch { return {}; } };
+const naLista = n => String(n.na || '').split(',').filter(Boolean);
+function statusDoc(n, k) {
+  if ((arq(n)[k] || 0) > 0) return 'ok';
+  return naLista(n).includes(k) ? 'na' : 'falta';
+}
+const pendencias = n => DOCS.filter(([k]) => statusDoc(n, k) === 'falta').map(([k]) => k);
+const nomePasta = n => `${pad(n.numero)} - ${n.empresa || '…'} - ${brl(n.valor)}`;
+function caminho(n) {
+  const partes = [RAIZ[n.projeto]];
+  if (n.projeto === 'FAPERGS') partes.push(periodoNome(n.periodo) || 'escolha o período');
+  partes.push(CATEGORIAS[n.projeto][n.categoria]);
+  if (n.projeto === 'FAPERGS' && n.categoria === 'servico') partes.push(PESSOA[n.pessoa || 'PJ']);
+  partes.push(nomePasta(n));
+  return partes.map(p => `<span>${esc(p)}</span>`).join('');
+}
+const linkPasta = id => `https://drive.google.com/drive/folders/${id}`;
+const chips = n => `<div class="chips">${DOCS.map(([k]) => `<span class="chip ${statusDoc(n, k)}" title="${esc(DOCS.find(d => d[0] === k)[1])}">${DOC_CURTO[k]}</span>`).join('')}</div>`;
+
+function aviso(msg, ms = 3500) {
+  const a = $('#aviso'); a.textContent = msg; a.classList.remove('oculto');
+  clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.add('oculto'), ms);
+}
+const paraBase64 = f => new Promise((res, rej) => {
+  const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f);
+});
+function tipoDoArquivo(nome) {
+  const s = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (s.endsWith('.xml')) return 'xml';
+  if (/exclusividade/.test(s)) return 'carta';
+  if (/boleto/.test(s)) return 'boleto';
+  if (/comprovante|pgto|pagamento|pix|transferencia/.test(s)) return 'comprovante';
+  if (/orcamento|proposta|cotacao/.test(s)) return 'orcamento';
+  return 'nf';
+}
+
+/* ---------- API ---------- */
+async function api(action, dados = {}) {
+  if (API_URL.startsWith('COLE_')) throw new Error('Falta configurar a URL do Apps Script no index.html.');
+  const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, senha: SENHA, ...dados }) });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.erro || 'Erro no servidor.');
+  return j;
+}
+async function carregar() {
+  const j = await api('listar');
+  Object.assign(S, { notas: j.notas, itens: j.itens, periodos: j.periodos, semNota: j.semNota });
+  renderTudo();
+}
+async function enviarArquivo(notaId, tipo, file) {
+  if (file.size > 25 * 1024 * 1024) throw new Error(`${file.name} passa de 25 MB.`);
+  const j = await api('anexar', { notaId, tipo, nome: file.name, mime: file.type || 'application/octet-stream', base64: await paraBase64(file) });
+  atualizarLocal(j.nota);
+}
+function atualizarLocal(nota) {
+  const i = S.notas.findIndex(n => n.id === nota.id);
+  if (i >= 0) S.notas[i] = nota; else S.notas.push(nota);
+}
+
+/* ---------- Login ---------- */
+$('#formLogin').addEventListener('submit', async e => {
+  e.preventDefault();
+  SENHA = $('#senha').value.trim();
+  const bt = e.target.querySelector('button'); bt.disabled = true; $('#erroLogin').textContent = '';
+  try {
+    await api('login');
+    try { localStorage.setItem('pc_senha', SENHA); } catch {}
+    entrar();
+  } catch (err) { $('#erroLogin').textContent = err.message; }
+  bt.disabled = false;
+});
+async function entrar() {
+  $('#login').classList.add('oculto'); $('#app').classList.remove('oculto');
+  $('#aba-painel').innerHTML = '<p class="vazio">Carregando dados do Drive…</p>';
+  try { await carregar(); } catch (err) { $('#aba-painel').innerHTML = `<p class="vazio erro">${esc(err.message)}</p>`; }
+}
+$('#btSair').onclick = () => { try { localStorage.removeItem('pc_senha'); } catch {} location.reload(); };
+$('#btSync').onclick = async () => {
+  const bt = $('#btSync'); bt.disabled = true; bt.textContent = 'Sincronizando…';
+  try { const j = await api('sincronizar'); await carregar(); aviso(j.msg, 6000); }
+  catch (err) { aviso(err.message, 6000); }
+  bt.disabled = false; bt.textContent = 'Sincronizar com o Drive';
+};
+(function inicio() {
+  let s = ''; try { s = localStorage.getItem('pc_senha') || ''; } catch {}
+  if (s) { SENHA = s; api('login').then(entrar).catch(() => {}); }
+})();
+
+/* ---------- Abas ---------- */
+document.querySelectorAll('nav.abas button').forEach(b => b.onclick = () => abrirAba(b.dataset.aba));
+function abrirAba(nome) {
+  document.querySelectorAll('nav.abas button').forEach(b => b.setAttribute('aria-selected', b.dataset.aba === nome));
+  document.querySelectorAll('main > section').forEach(s => s.classList.toggle('oculto', s.id !== 'aba-' + nome));
+  if (nome === 'nova' && !NOVA.iniciada) renderNova();
+}
+function renderTudo() { renderPainel(); renderNotas(); renderInventario(); if (NOVA.iniciada) atualizarCaminhoNova(); }
+
+/* ---------- Painel de pendências ---------- */
+function renderPainel() {
+  const blocos = PROJETOS.map(p => {
+    const ns = S.notas.filter(n => n.projeto === p);
+    const completas = ns.filter(n => !pendencias(n).length).length;
+    const total = ns.reduce((s, n) => s + Number(n.valor || 0), 0);
+    const pct = ns.length ? Math.round(completas / ns.length * 100) : 0;
+    const porDoc = DOCS.map(([k, rot]) => [rot, ns.filter(n => statusDoc(n, k) === 'falta').length]).filter(x => x[1]);
+    return `<div class="bloco projeto">
+      <h3>${p} <small>${ns.length} nota(s)</small></h3>
+      <div class="barra" aria-hidden="true"><div style="width:${pct}%"></div></div>
+      <span class="rotulo">${completas} de ${ns.length} com documentação completa</span>
+      <div class="numeros">
+        <div><strong>${brl(total)}</strong><span>total em notas</span></div>
+        <div><strong>${ns.length - completas}</strong><span>notas com pendência</span></div>
+      </div>
+      ${porDoc.length ? `<p style="margin:14px 0 0;font-size:14px">Faltando: ${porDoc.map(([r, q]) => `${esc(r)} (${q})`).join(', ')}</p>` : ''}
+    </div>`;
+  }).join('');
+
+  const pend = S.notas.filter(n => pendencias(n).length)
+    .sort((a, b) => a.projeto.localeCompare(b.projeto) || String(a.periodo).localeCompare(String(b.periodo)) || a.categoria.localeCompare(b.categoria) || a.numero - b.numero);
+  const linhas = pend.map(n => `<tr class="clicavel" data-id="${n.id}">
+      <td>${n.projeto}</td><td>${esc(CATEGORIAS[n.projeto][n.categoria])}</td>
+      <td>${pad(n.numero)} - ${esc(n.empresa)}</td><td class="num">${brl(n.valor)}</td>
+      <td><div class="chips">${pendencias(n).map(k => `<span class="chip falta">${DOC_CURTO[k]}</span>`).join('')}</div></td></tr>`).join('');
+
+  const orfas = S.semNota.map(o => `<tr><td>${esc(o.projeto)}</td><td>${esc(o.nf)}</td><td>${esc(o.empresa)}</td><td>${esc(dataBR(o.data) || o.data)}</td><td class="num">${o.itens}</td></tr>`).join('');
+
+  $('#aba-painel').innerHTML = `
+    <h2>Pendências</h2>
+    <p class="sub">O que já está documentado e o que ainda falta para a prestação de contas.</p>
+    <div class="projetos">${blocos}</div>
+    <div class="bloco">
+      <h3>Notas com documento faltando (${pend.length})</h3>
+      ${pend.length ? `<div class="rolagem"><table><thead><tr><th>Projeto</th><th>Pasta</th><th>Nota</th><th class="num">Valor</th><th>Falta</th></tr></thead><tbody>${linhas}</tbody></table></div>`
+        : '<p class="vazio">Nenhuma pendência. Toda a documentação está completa.</p>'}
+    </div>
+    ${S.semNota.length ? `<div class="bloco">
+      <h3>Notas da planilha antiga sem pasta vinculada (${S.semNota.length})</h3>
+      <p class="sub" style="margin-bottom:12px">Estão na planilha de inventário, mas nenhuma pasta tem esse número de NF. Se a pasta existe, abra a nota e preencha o número da NF para vincular.</p>
+      <div class="rolagem"><table><thead><tr><th>Projeto</th><th>NF</th><th>Empresa</th><th>Data</th><th class="num">Itens</th></tr></thead><tbody>${orfas}</tbody></table></div>
+    </div>` : ''}`;
+  $('#aba-painel').querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => abrirDetalhe(tr.dataset.id));
+}
+
+/* ---------- Lista de notas ---------- */
+const FILTRO = { projeto: '', periodo: '', categoria: '', status: '', busca: '' };
+function renderNotas() {
+  const el = $('#aba-notas');
+  if (!el.dataset.pronto) {
+    el.innerHTML = `<h2>Notas</h2><p class="sub">Clique em uma nota para ver os documentos, anexar o que falta ou corrigir os dados.</p>
+      <div class="filtros">
+        <select data-f="projeto" aria-label="Projeto"><option value="">Todos os projetos</option>${PROJETOS.map(p => `<option>${p}</option>`).join('')}</select>
+        <select data-f="periodo" aria-label="Período"></select>
+        <select data-f="categoria" aria-label="Tipo"><option value="">Todos os tipos</option><option value="consumo">Consumo / Custeio</option><option value="permanente">Permanente / Capital</option><option value="servico">Serviços</option></select>
+        <select data-f="status" aria-label="Situação"><option value="">Todas</option><option value="pend">Com pendência</option><option value="ok">Completas</option></select>
+        <input type="search" data-f="busca" placeholder="Buscar empresa, NF ou item">
+      </div><div id="tabNotas"></div>`;
+    el.querySelectorAll('[data-f]').forEach(c => c.oninput = () => { FILTRO[c.dataset.f] = c.value; desenharNotas(); });
+    el.dataset.pronto = 1;
+  }
+  el.querySelector('[data-f=periodo]').innerHTML = `<option value="">Todos os períodos FAPERGS</option>` +
+    S.periodos.map(p => `<option value="${p.id}" ${FILTRO.periodo === p.id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('');
+  desenharNotas();
+}
+function desenharNotas() {
+  const b = FILTRO.busca.toLowerCase();
+  const lista = S.notas.filter(n =>
+    (!FILTRO.projeto || n.projeto === FILTRO.projeto) &&
+    (!FILTRO.periodo || n.periodo === FILTRO.periodo) &&
+    (!FILTRO.categoria || n.categoria === FILTRO.categoria) &&
+    (!FILTRO.status || (FILTRO.status === 'pend') === pendencias(n).length > 0) &&
+    (!b || [n.empresa, n.razaoSocial, n.nf, ...S.itens.filter(i => i.notaId === n.id).map(i => i.descricao)].join(' ').toLowerCase().includes(b))
+  ).sort((a, c) => a.projeto.localeCompare(c.projeto) || a.categoria.localeCompare(c.categoria) || a.numero - c.numero);
+  $('#tabNotas').innerHTML = lista.length ? `<div class="rolagem"><table>
+    <thead><tr><th>Projeto</th><th>Tipo</th><th>Pasta</th><th>NF</th><th>Data</th><th class="num">Valor</th><th>Documentos</th></tr></thead>
+    <tbody>${lista.map(n => `<tr class="clicavel" data-id="${n.id}">
+      <td>${n.projeto}${n.projeto === 'FAPERGS' ? `<br><small>${esc(periodoNome(n.periodo).split(' - ')[0])}</small>` : ''}</td>
+      <td>${TIPO_CURTO[n.categoria]}${n.pessoa ? ` (${n.pessoa})` : ''}</td>
+      <td>${pad(n.numero)} - ${esc(n.empresa)}</td><td>${esc(n.nf)}</td><td>${dataBR(n.data)}</td>
+      <td class="num">${brl(n.valor)}</td><td>${chips(n)}</td></tr>`).join('')}</tbody></table></div>
+    <p class="rotulo" style="margin-top:10px">${lista.length} nota(s), ${brl(lista.reduce((s, n) => s + Number(n.valor || 0), 0))}</p>`
+    : '<p class="vazio">Nenhuma nota com esses filtros.</p>';
+  $('#tabNotas').querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => abrirDetalhe(tr.dataset.id));
+}
+
+/* ---------- Campos compartilhados (nova nota e edição) ---------- */
+function camposLocal(n, pref) {
+  return `
+    <span class="rotulo">Projeto</span>
+    <div class="escolha">${PROJETOS.map(p => `<label><input type="radio" name="${pref}projeto" value="${p}" ${n.projeto === p ? 'checked' : ''}><span>${p}</span></label>`).join('')}</div>
+    <div data-so="FAPERGS" class="${n.projeto === 'FAPERGS' ? '' : 'oculto'}">
+      <label class="campo">Período da prestação de contas
+        <select name="${pref}periodo">${S.periodos.map(p => `<option value="${p.id}" ${n.periodo === p.id ? 'selected' : ''}>${esc(p.nome)}</option>`).join('')}</select>
+      </label>
+    </div>
+    <span class="rotulo">Tipo</span>
+    <div class="escolha">${Object.keys(TIPO_CURTO).map(c => `<label><input type="radio" name="${pref}categoria" value="${c}" ${n.categoria === c ? 'checked' : ''}><span data-cat="${c}">${esc(CATEGORIAS[n.projeto || 'CNPq'][c].slice(5))}</span></label>`).join('')}</div>
+    <div data-so="pessoa" class="${n.projeto === 'FAPERGS' && n.categoria === 'servico' ? '' : 'oculto'}">
+      <div class="escolha">${Object.keys(PESSOA).map(k => `<label><input type="radio" name="${pref}pessoa" value="${k}" ${(n.pessoa || 'PJ') === k ? 'checked' : ''}><span>${PESSOA[k]}</span></label>`).join('')}</div>
+    </div>`;
+}
+function camposDados(n, pref) {
+  return `<div class="grade">
+      <label class="campo">Nome da empresa na pasta<input name="${pref}empresa" value="${esc(n.empresa)}" placeholder="Ex.: GGotuzzo" required></label>
+      <label class="campo">Valor total da nota (R$)<input name="${pref}valor" inputmode="decimal" value="${n.valor ? Number(n.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}" placeholder="0,00"></label>
+      <label class="campo">Número da NF<input name="${pref}nf" value="${esc(n.nf)}"></label>
+      <label class="campo">Data da nota<input type="date" name="${pref}data" value="${esc(n.data)}"></label>
+    </div>
+    <div class="grade">
+      <label class="campo">Razão social<input name="${pref}razaoSocial" value="${esc(n.razaoSocial)}"></label>
+      <label class="campo">CNPJ / CPF<input name="${pref}cnpj" value="${esc(n.cnpj)}"></label>
+    </div>
+    <label class="campo">Observações<textarea name="${pref}obs" rows="2">${esc(n.obs)}</textarea></label>`;
+}
+function lerCampos(raiz, pref) {
+  const v = nome => { const el = raiz.querySelector(`[name="${pref}${nome}"]:checked`) || raiz.querySelector(`[name="${pref}${nome}"]:not([type=radio])`); return el ? el.value : ''; };
+  const n = { projeto: v('projeto'), categoria: v('categoria'), empresa: v('empresa').trim(), valor: numBR(v('valor')),
+    nf: v('nf').trim(), data: v('data'), razaoSocial: v('razaoSocial').trim(), cnpj: v('cnpj').trim(), obs: v('obs').trim() };
+  n.periodo = n.projeto === 'FAPERGS' ? v('periodo') : '';
+  n.pessoa = n.projeto === 'FAPERGS' && n.categoria === 'servico' ? v('pessoa') : '';
+  return n;
+}
+function ligarLocal(raiz, pref, aoMudar) {
+  raiz.querySelectorAll(`[name="${pref}projeto"], [name="${pref}categoria"], [name="${pref}periodo"], [name="${pref}pessoa"]`).forEach(c => c.addEventListener('change', () => {
+    const n = lerCampos(raiz, pref);
+    raiz.querySelector('[data-so=FAPERGS]').classList.toggle('oculto', n.projeto !== 'FAPERGS');
+    raiz.querySelector('[data-so=pessoa]').classList.toggle('oculto', !(n.projeto === 'FAPERGS' && n.categoria === 'servico'));
+    raiz.querySelectorAll('[data-cat]').forEach(s => s.textContent = CATEGORIAS[n.projeto || 'CNPq'][s.dataset.cat].slice(5));
+    aoMudar && aoMudar(c.name.replace(pref, ''));
+  }));
+  raiz.querySelectorAll(`[name="${pref}empresa"], [name="${pref}valor"]`).forEach(c => c.addEventListener('input', () => aoMudar && aoMudar('texto')));
+}
+function tabelaItens(itens, id) {
+  return `<div class="rolagem"><table class="itens" id="${id}"><thead><tr><th>Descrição do item</th><th>Qtde</th><th></th></tr></thead>
+    <tbody>${itens.map(linhaItem).join('')}</tbody></table></div>
+    <button type="button" class="botao sec peq" style="margin-top:8px" data-add="${id}">Adicionar item</button>`;
+}
+const linhaItem = it => `<tr><td><input value="${esc(it.descricao)}" aria-label="Descrição"></td><td class="q"><input value="${esc(it.qtde ?? 1)}" inputmode="decimal" aria-label="Quantidade"></td><td class="x"><button type="button" class="remover" aria-label="Remover item">×</button></td></tr>`;
+function ligarItens(raiz) {
+  raiz.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+    raiz.querySelector('#' + b.dataset.add + ' tbody').insertAdjacentHTML('beforeend', linhaItem({ descricao: '', qtde: 1 }));
+  });
+  raiz.addEventListener('click', e => { if (e.target.classList.contains('remover')) e.target.closest('tr').remove(); });
+}
+const lerItens = (raiz, id) => [...raiz.querySelectorAll('#' + id + ' tbody tr')].map(tr => {
+  const [d, q] = tr.querySelectorAll('input'); return { descricao: d.value.trim(), qtde: numBR(q.value) || 1 };
+}).filter(i => i.descricao);
+
+/* ---------- Nova nota ---------- */
+const NOVA = { iniciada: false, numero: null, anexos: [], itens: [] };
+function renderNova() {
+  NOVA.iniciada = true; NOVA.anexos = []; NOVA.itens = []; NOVA.numero = null;
+  const base = { projeto: 'CNPq', categoria: 'consumo', periodo: (S.periodos[S.periodos.length - 1] || {}).id, pessoa: 'PJ' };
+  $('#aba-nova').innerHTML = `
+    <h2>Nova nota</h2>
+    <p class="sub">Envie a nota fiscal para preencher os dados automaticamente. Confira tudo antes de salvar.</p>
+    <form id="formNova">
+      <div class="bloco">
+        <h3>1. Nota fiscal</h3>
+        <div class="solta" id="soltaNF" tabindex="0" role="button">
+          <strong>Arraste a nota aqui ou clique para escolher</strong>
+          <span>XML da NF-e (leitura completa) ou PDF/foto da nota (leitura aproximada)</span>
+        </div>
+        <input type="file" id="arqNF" accept=".xml,.pdf,.jpg,.jpeg,.png" multiple hidden>
+        <p id="leituraStatus" class="rotulo" style="margin:10px 0 0"></p>
+      </div>
+      <div class="bloco">
+        <h3>2. Onde guardar</h3>
+        ${camposLocal(base, 'n_')}
+        <span class="rotulo">A pasta será criada em</span>
+        <div class="caminho" id="caminhoNova"></div>
+      </div>
+      <div class="bloco">
+        <h3>3. Dados da nota</h3>
+        ${camposDados({}, 'n_')}
+        <h3 style="margin-top:8px">Itens</h3>
+        ${tabelaItens([], 'itensNova')}
+      </div>
+      <div class="bloco">
+        <h3>4. Outros documentos</h3>
+        <p class="sub" style="margin-bottom:12px">Boleto, comprovante, orçamentos e carta de exclusividade. Você também pode anexar depois, pela aba Notas.</p>
+        <div class="filtros">
+          <select id="tipoAnexo" aria-label="Tipo do documento">${DOCS.filter(d => d[0] !== 'nf').map(([k, r]) => `<option value="${k}">${r}</option>`).join('')}</select>
+          <input type="file" id="arqAnexo" multiple>
+        </div>
+        <ul class="anexos-lista" id="listaAnexos"></ul>
+      </div>
+      <button class="botao" id="btSalvarNova">Salvar nota e criar pasta</button>
+      <span id="salvarStatus" class="rotulo" style="margin-left:12px"></span>
+    </form>`;
+  const f = $('#formNova');
+  ligarLocal(f, 'n_', campo => { if (campo !== 'texto' && campo !== 'pessoa' && campo !== 'periodo') buscarNumero(); else atualizarCaminhoNova(); });
+  ligarItens(f);
+  const solta = $('#soltaNF'), inp = $('#arqNF');
+  solta.onclick = () => inp.click();
+  solta.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } };
+  solta.ondragover = e => { e.preventDefault(); solta.classList.add('ativa'); };
+  solta.ondragleave = () => solta.classList.remove('ativa');
+  solta.ondrop = e => { e.preventDefault(); solta.classList.remove('ativa'); receberNF([...e.dataTransfer.files]); };
+  inp.onchange = () => receberNF([...inp.files]);
+  $('#arqAnexo').onchange = e => {
+    [...e.target.files].forEach(file => NOVA.anexos.push({ tipo: $('#tipoAnexo').value, file }));
+    e.target.value = ''; desenharAnexos();
+  };
+  f.onsubmit = salvarNova;
+  buscarNumero();
+}
+function desenharAnexos() {
+  const nomes = Object.fromEntries(DOCS.concat([['xml', 'XML da NF-e']]));
+  $('#listaAnexos').innerHTML = NOVA.anexos.map((a, i) => `<li><span class="chip ok">${esc(nomes[a.tipo])}</span>${esc(a.file.name)}
+    <button type="button" class="remover" data-i="${i}" aria-label="Remover">×</button></li>`).join('');
+  $('#listaAnexos').querySelectorAll('[data-i]').forEach(b => b.onclick = () => { NOVA.anexos.splice(b.dataset.i, 1); desenharAnexos(); });
+}
+async function buscarNumero() {
+  const n = lerCampos($('#formNova'), 'n_');
+  NOVA.numero = null; atualizarCaminhoNova();
+  try { const j = await api('proximoNumero', { projeto: n.projeto, categoria: n.categoria }); NOVA.numero = j.numero; }
+  catch (err) { aviso(err.message); }
+  atualizarCaminhoNova();
+}
+function atualizarCaminhoNova() {
+  const f = $('#formNova'); if (!f) return;
+  const n = lerCampos(f, 'n_'); n.numero = NOVA.numero || '..';
+  $('#caminhoNova').innerHTML = caminho(n);
+}
+async function receberNF(files) {
+  if (!files.length) return;
+  files.forEach(file => NOVA.anexos.push({ tipo: file.name.toLowerCase().endsWith('.xml') ? 'xml' : 'nf', file }));
+  desenharAnexos();
+  const alvo = files.find(f => f.name.toLowerCase().endsWith('.xml')) || files[0];
+  const st = $('#leituraStatus');
+  st.textContent = `Lendo ${alvo.name}…`;
+  try {
+    const j = await api('lerDocumento', { nome: alvo.name, mime: alvo.type || 'application/octet-stream', base64: await paraBase64(alvo) });
+    preencherNova(j.dados);
+    st.textContent = j.origem === 'xml'
+      ? 'Dados lidos do XML. Confira o nome da empresa para a pasta.'
+      : 'Leitura aproximada do PDF/imagem. Confira os campos e adicione os itens manualmente.';
+  } catch (err) { st.textContent = err.message; st.classList.add('erro'); }
+}
+function nomeCurto(razao) {
+  const r = String(razao || '').toUpperCase();
+  const conhecidos = [[/GOTUZZO/, 'GGotuzzo'], [/SIGMA/, 'Sigma - Servylab'], [/PRO ANALISE|PRÓ ANÁLISE/, 'Pro análise'],
+    [/OXIGEO/, 'Oxigeo'], [/QUANTITY/, 'Quantity Serviços e Comércio'], [/SURYA/, 'Surya Dental'], [/LSI/, 'LSI SA'], [/LATAM|TAM LINHAS/, 'Latam'], [/AZUL/, 'Azul']];
+  for (const [re, nome] of conhecidos) if (re.test(r)) return nome;
+  const p = String(razao || '').replace(/\b(LTDA|S\.?A\.?|ME|EPP|EIRELI|COMERCIO|COM\.?|IND\.?)\b.*/i, '').trim();
+  return p.split(/\s+/).slice(0, 3).map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+}
+function preencherNova(d) {
+  const f = $('#formNova'); const set = (k, v) => { const el = f.querySelector(`[name="n_${k}"]`); if (el && v) el.value = v; };
+  set('nf', d.nf); set('data', d.data); set('razaoSocial', d.razaoSocial); set('cnpj', d.cnpj);
+  if (d.valor) set('valor', Number(d.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+  if (!f.querySelector('[name=n_empresa]').value) set('empresa', nomeCurto(d.razaoSocial));
+  if (d.itens && d.itens.length) f.querySelector('#itensNova tbody').innerHTML = d.itens.map(linhaItem).join('');
+  atualizarCaminhoNova();
+}
+async function salvarNova(e) {
+  e.preventDefault();
+  const f = $('#formNova'), bt = $('#btSalvarNova'), st = $('#salvarStatus');
+  const nota = lerCampos(f, 'n_');
+  if (!nota.empresa) return aviso('Informe o nome da empresa para a pasta.');
+  if (!nota.valor) return aviso('Informe o valor total da nota.');
+  bt.disabled = true; st.textContent = 'Criando pasta…';
+  try {
+    const j = await api('salvarNota', { nota, itens: lerItens(f, 'itensNova') });
+    atualizarLocal(j.nota);
+    for (let i = 0; i < NOVA.anexos.length; i++) {
+      st.textContent = `Enviando arquivo ${i + 1} de ${NOVA.anexos.length}…`;
+      await enviarArquivo(j.nota.id, NOVA.anexos[i].tipo, NOVA.anexos[i].file);
+    }
+    await carregar();
+    aviso(`Pasta "${nomePasta(j.nota)}" criada.`, 5000);
+    renderNova();
+    abrirDetalhe(j.nota.id);
+  } catch (err) { st.textContent = err.message; aviso(err.message, 6000); }
+  bt.disabled = false;
+}
+
+/* ---------- Detalhe / edição ---------- */
+function abrirDetalhe(id) {
+  const n = S.notas.find(x => x.id === id); if (!n) return;
+  const itens = S.itens.filter(i => i.notaId === id);
+  const dlg = $('#detalhe');
+  dlg.innerHTML = `
+    <div class="cab"><div><h3>${pad(n.numero)} - ${esc(n.empresa)}</h3>
+      <span class="rotulo">${n.projeto}, ${esc(CATEGORIAS[n.projeto][n.categoria])}${n.nf ? `, NF ${esc(n.nf)}` : ''}</span></div>
+      <button class="botao sec peq" data-fechar>Fechar</button></div>
+    <div class="corpo">
+      <h3>Documentos</h3>
+      <ul class="docs">${DOCS.map(([k, rot]) => {
+        const s = statusDoc(n, k), q = arq(n)[k] || 0;
+        return `<li><span class="nome">${rot}</span>
+          <span class="chip ${s}">${s === 'ok' ? q + ' arquivo(s)' : s === 'na' ? 'Não se aplica' : 'Falta'}</span>
+          <label class="na"><input type="checkbox" data-na="${k}" ${naLista(n).includes(k) ? 'checked' : ''}> Não se aplica</label>
+          <label class="botao sec peq">Anexar<input type="file" data-anexar="${k}" multiple hidden></label></li>`;
+      }).join('')}</ul>
+      ${arq(n).xml ? `<p class="rotulo" style="margin-top:8px">XML da NF-e anexado.</p>` : ''}
+      <p class="rotulo" id="detStatus" style="min-height:1.5em"></p>
+      <form id="formDet">
+        <h3 style="margin-top:12px">Local</h3>
+        ${camposLocal(n, 'd_')}
+        <span class="rotulo">Pasta</span><div class="caminho" id="caminhoDet">${caminho(n)}</div>
+        <h3>Dados</h3>
+        ${camposDados(n, 'd_')}
+        <h3>Itens</h3>
+        ${tabelaItens(itens, 'itensDet')}
+      </form>
+    </div>
+    <div class="rodape">
+      <a class="botao sec" href="${linkPasta(n.pastaId)}" target="_blank" rel="noopener">Abrir pasta no Drive</a>
+      <button class="botao" id="btSalvarDet">Salvar alterações</button>
+    </div>`;
+  const f = dlg.querySelector('#formDet');
+  ligarLocal(f, 'd_', () => { const x = Object.assign({}, n, lerCampos(f, 'd_')); $('#caminhoDet').innerHTML = caminho(x); });
+  ligarItens(f);
+  dlg.querySelector('[data-fechar]').onclick = () => dlg.close();
+  dlg.querySelectorAll('[data-na]').forEach(c => c.onchange = async () => {
+    $('#detStatus').textContent = 'Salvando…';
+    try { const j = await api('marcarNA', { notaId: id, doc: c.dataset.na, na: c.checked }); atualizarLocal(j.nota); renderTudo(); abrirDetalhe(id); }
+    catch (err) { $('#detStatus').textContent = err.message; }
+  });
+  dlg.querySelectorAll('[data-anexar]').forEach(c => c.onchange = async () => {
+    try {
+      const files = [...c.files];
+      for (let i = 0; i < files.length; i++) {
+        $('#detStatus').textContent = `Enviando ${files[i].name}…`;
+        await enviarArquivo(id, c.dataset.anexar, files[i]);
+      }
+      renderTudo(); abrirDetalhe(id); aviso('Documento anexado.');
+    } catch (err) { $('#detStatus').textContent = err.message; }
+  });
+  dlg.querySelector('#btSalvarDet').onclick = async e => {
+    const nova = Object.assign({ id }, lerCampos(f, 'd_'));
+    if (!nova.empresa) return aviso('Informe o nome da empresa para a pasta.');
+    e.target.disabled = true; $('#detStatus').textContent = 'Salvando e renomeando a pasta…';
+    try {
+      const j = await api('atualizarNota', { nota: nova, itens: lerItens(f, 'itensDet') });
+      atualizarLocal(j.nota);
+      S.itens = S.itens.filter(i => i.notaId !== id).concat(lerItens(f, 'itensDet').map(i => ({ ...i, notaId: id })));
+      renderTudo(); abrirDetalhe(id); aviso('Alterações salvas.');
+    } catch (err) { $('#detStatus').textContent = err.message; e.target.disabled = false; }
+  };
+  if (!dlg.open) dlg.showModal();
+}
+
+/* ---------- Inventário ---------- */
+const FI = { projeto: '', categoria: '', busca: '' };
+function linhasInventario() {
+  const porId = Object.fromEntries(S.notas.map(n => [n.id, n]));
+  return S.itens.map(i => ({ i, n: porId[i.notaId] })).filter(x => x.n).filter(({ i, n }) =>
+    (!FI.projeto || n.projeto === FI.projeto) && (!FI.categoria || n.categoria === FI.categoria) &&
+    (!FI.busca || [i.descricao, n.empresa, n.razaoSocial, n.nf].join(' ').toLowerCase().includes(FI.busca.toLowerCase()))
+  ).sort((a, b) => String(a.n.data).localeCompare(String(b.n.data)));
+}
+function renderInventario() {
+  const el = $('#aba-inventario');
+  if (!el.dataset.pronto) {
+    el.innerHTML = `<h2>Inventário</h2><p class="sub">Todos os itens comprados, com a nota e a pasta de origem.</p>
+      <div id="resumoInv" class="bloco"></div>
+      <div class="filtros">
+        <select data-fi="projeto" aria-label="Projeto"><option value="">Todos os projetos</option>${PROJETOS.map(p => `<option>${p}</option>`).join('')}</select>
+        <select data-fi="categoria" aria-label="Tipo"><option value="">Todos os tipos</option><option value="consumo">Consumo</option><option value="permanente">Permanente</option><option value="servico">Serviço</option></select>
+        <input type="search" data-fi="busca" placeholder="Buscar item, empresa ou NF">
+        <button class="botao sec" id="btCsv">Baixar planilha (CSV)</button>
+      </div><div id="tabInv"></div>`;
+    el.querySelectorAll('[data-fi]').forEach(c => c.oninput = () => { FI[c.dataset.fi] = c.value; desenharInventario(); });
+    el.querySelector('#btCsv').onclick = baixarCsv;
+    el.dataset.pronto = 1;
+  }
+  $('#resumoInv').innerHTML = `<div class="numeros">${PROJETOS.map(p => {
+    const ns = S.notas.filter(n => n.projeto === p).map(n => n.id);
+    return `<div><strong>${ns.length} compras, ${S.itens.filter(i => ns.includes(i.notaId)).length} itens</strong><span>${p}</span></div>`;
+  }).join('')}</div>`;
+  desenharInventario();
+}
+function desenharInventario() {
+  const ls = linhasInventario();
+  $('#tabInv').innerHTML = ls.length ? `<div class="rolagem"><table>
+    <thead><tr><th>Projeto</th><th>Item</th><th class="num">Qtde</th><th>Tipo</th><th>Data</th><th>NF</th><th>Empresa</th><th>Pasta</th></tr></thead>
+    <tbody>${ls.map(({ i, n }) => `<tr class="clicavel" data-id="${n.id}"><td>${n.projeto}</td><td>${esc(i.descricao)}</td><td class="num">${esc(i.qtde)}</td>
+      <td>${TIPO_CURTO[n.categoria]}</td><td>${dataBR(n.data)}</td><td>${esc(n.nf)}</td><td>${esc(n.razaoSocial || n.empresa)}</td><td>${pad(n.numero)}</td></tr>`).join('')}</tbody></table></div>
+    <p class="rotulo" style="margin-top:10px">${ls.length} item(ns)</p>`
+    : '<p class="vazio">Nenhum item encontrado. Itens aparecem aqui quando a nota tem XML ou quando você os cadastra.</p>';
+  $('#tabInv').querySelectorAll('tr[data-id]').forEach(tr => tr.onclick = () => abrirDetalhe(tr.dataset.id));
+}
+function baixarCsv() {
+  const cel = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const linhas = [['Projeto', 'Item', 'Qtde', 'Tipo de material', 'Data da compra', 'Nota Fiscal', 'Empresa', 'Pasta', 'Valor da nota']]
+    .concat(linhasInventario().map(({ i, n }) => [n.projeto, i.descricao, i.qtde, TIPO_CURTO[n.categoria], dataBR(n.data), n.nf,
+      n.razaoSocial || n.empresa, nomePasta(n), Number(n.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })]));
+  const blob = new Blob(['\ufeff' + linhas.map(l => l.map(cel).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'inventario.csv'; a.click();
+}
+</script>
+</body>
+</html>
