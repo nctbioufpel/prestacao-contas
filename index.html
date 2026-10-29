@@ -147,6 +147,27 @@ td.num { text-align: right; white-space: nowrap; }
 .docs { list-style: none; margin: 0; padding: 0; }
 .docs li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--linha); }
 .docs li .nome { flex: 1; min-width: 140px; font-weight: 600; }
+
+/* ---------- Navegador do Drive ---------- */
+#drive { width: min(720px, 96vw); }
+.atalhos { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.atalhos button { border: 1px solid var(--linha); background: var(--papel); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.atalhos button:hover { border-color: var(--vinho); color: var(--vinho); }
+.busca-drive { display: flex; gap: 8px; margin-bottom: 10px; }
+.busca-drive input { flex: 1; padding: 8px 10px; border: 1px solid var(--linha); border-radius: 6px; background: var(--papel); }
+.trilha { font-size: 14px; color: var(--tinta-suave); margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+.trilha button { background: none; border: 0; padding: 0; color: var(--vinho); cursor: pointer; text-decoration: underline; }
+.trilha span::before, .trilha button + button::before, .trilha button + span::before { content: "/"; margin-right: 4px; color: var(--tinta-suave); text-decoration: none; display: inline-block; }
+.lista-drive { list-style: none; margin: 0; padding: 0; border: 1px solid var(--linha); border-radius: 8px; max-height: 50vh; overflow-y: auto; }
+.lista-drive li { border-bottom: 1px solid var(--linha); }
+.lista-drive li:last-child { border-bottom: 0; }
+.lista-drive button, .lista-drive label { display: flex; gap: 10px; align-items: center; width: 100%; padding: 9px 12px; background: none; border: 0; text-align: left; cursor: pointer; }
+.lista-drive button:hover, .lista-drive label:hover { background: var(--vinho-claro); }
+.lista-drive .ic { width: 22px; text-align: center; flex: none; }
+.lista-drive .nm { flex: 1; word-break: break-word; }
+.lista-drive small { color: var(--tinta-suave); white-space: nowrap; }
+.lista-drive li.sel label { background: var(--vinho-claro); font-weight: 600; }
+.rodape label.mover { margin-right: auto; font-size: 13px; color: var(--tinta-suave); display: flex; gap: 6px; align-items: center; max-width: 360px; }
 .docs li label.na { font-size: 13px; color: var(--tinta-suave); display: flex; gap: 4px; align-items: center; }
 
 /* ---------- Itens ---------- */
@@ -229,6 +250,7 @@ dialog .rodape { padding: 14px 22px; border-top: 1px solid var(--linha); display
 </div>
 
 <dialog id="detalhe"></dialog>
+<dialog id="drive"></dialog>
 <div id="aviso" class="oculto" role="status"></div>
 
 <script>
@@ -524,6 +546,7 @@ function renderNova() {
           <span>XML da NF-e (leitura completa) ou PDF/foto da nota (leitura aproximada)</span>
         </div>
         <input type="file" id="arqNF" accept=".xml,.pdf,.jpg,.jpeg,.png" multiple hidden>
+        <button type="button" class="botao sec peq" id="btDriveNF" style="margin-top:10px">Escolher a nota no Drive</button>
         <p id="leituraStatus" class="rotulo" style="margin:10px 0 0"></p>
       </div>
       <div class="bloco">
@@ -545,6 +568,7 @@ function renderNova() {
           <select id="tipoAnexo" aria-label="Tipo do documento">${DOCS.filter(d => d[0] !== 'nf').map(([k, r]) => `<option value="${k}">${r}</option>`).join('')}</select>
           <input type="file" id="arqAnexo" multiple>
         </div>
+        <button type="button" class="botao sec peq" id="btDriveAnexo">Escolher no Drive</button>
         <ul class="anexos-lista" id="listaAnexos"></ul>
       </div>
       <button class="botao" id="btSalvarNova">Salvar nota e criar pasta</button>
@@ -564,12 +588,20 @@ function renderNova() {
     [...e.target.files].forEach(file => NOVA.anexos.push({ tipo: $('#tipoAnexo').value, file }));
     e.target.value = ''; desenharAnexos();
   };
+  $('#btDriveAnexo').onclick = async () => {
+    const tipo = $('#tipoAnexo').value;
+    const r = await escolherDoDrive({ titulo: 'Escolher ' + DOCS.find(d => d[0] === tipo)[1].toLowerCase() });
+    if (!r) return;
+    r.arquivos.forEach(a => NOVA.anexos.push({ tipo, drive: a, mover: r.mover }));
+    desenharAnexos();
+  };
+  $('#btDriveNF').onclick = lerNFdoDrive;
   f.onsubmit = salvarNova;
   buscarNumero();
 }
 function desenharAnexos() {
   const nomes = Object.fromEntries(DOCS.concat([['xml', 'XML da NF-e']]));
-  $('#listaAnexos').innerHTML = NOVA.anexos.map((a, i) => `<li><span class="chip ok">${esc(nomes[a.tipo])}</span>${esc(a.file.name)}
+  $('#listaAnexos').innerHTML = NOVA.anexos.map((a, i) => `<li><span class="chip ok">${esc(nomes[a.tipo])}</span>${a.file ? esc(a.file.name) : esc(a.drive.nome) + (a.mover ? ' (mover do Drive)' : ' (copiar do Drive)')}
     <button type="button" class="remover" data-i="${i}" aria-label="Remover">×</button></li>`).join('');
   $('#listaAnexos').querySelectorAll('[data-i]').forEach(b => b.onclick = () => { NOVA.anexos.splice(b.dataset.i, 1); desenharAnexos(); });
 }
@@ -585,15 +617,28 @@ function atualizarCaminhoNova() {
   const n = lerCampos(f, 'n_'); n.numero = NOVA.numero || '..';
   $('#caminhoNova').innerHTML = caminho(n);
 }
+const ehXml = nome => String(nome).toLowerCase().endsWith('.xml');
 async function receberNF(files) {
   if (!files.length) return;
-  files.forEach(file => NOVA.anexos.push({ tipo: file.name.toLowerCase().endsWith('.xml') ? 'xml' : 'nf', file }));
+  files.forEach(file => NOVA.anexos.push({ tipo: ehXml(file.name) ? 'xml' : 'nf', file }));
   desenharAnexos();
-  const alvo = files.find(f => f.name.toLowerCase().endsWith('.xml')) || files[0];
+  const alvo = files.find(f => ehXml(f.name)) || files[0];
+  await lerNota(alvo.name, async () => ({ nome: alvo.name, mime: alvo.type || 'application/octet-stream', base64: await paraBase64(alvo) }));
+}
+async function lerNFdoDrive() {
+  const r = await escolherDoDrive({ titulo: 'Escolher a nota fiscal (XML, PDF ou foto)' });
+  if (!r) return;
+  r.arquivos.forEach(a => NOVA.anexos.push({ tipo: ehXml(a.nome) ? 'xml' : 'nf', drive: a, mover: r.mover }));
+  desenharAnexos();
+  const alvo = r.arquivos.find(a => ehXml(a.nome)) || r.arquivos[0];
+  await lerNota(alvo.nome, async () => ({ fileId: alvo.id }));
+}
+async function lerNota(nome, dados) {
   const st = $('#leituraStatus');
-  st.textContent = `Lendo ${alvo.name}…`;
+  st.classList.remove('erro');
+  st.textContent = `Lendo ${nome}…`;
   try {
-    const j = await api('lerDocumento', { nome: alvo.name, mime: alvo.type || 'application/octet-stream', base64: await paraBase64(alvo) });
+    const j = await api('lerDocumento', await dados());
     preencherNova(j.dados);
     st.textContent = j.origem === 'xml'
       ? 'Dados lidos do XML. Confira o nome da empresa para a pasta.'
@@ -628,7 +673,9 @@ async function salvarNova(e) {
     atualizarLocal(j.nota);
     for (let i = 0; i < NOVA.anexos.length; i++) {
       st.textContent = `Enviando arquivo ${i + 1} de ${NOVA.anexos.length}…`;
-      await enviarArquivo(j.nota.id, NOVA.anexos[i].tipo, NOVA.anexos[i].file);
+      const a = NOVA.anexos[i];
+      if (a.drive) atualizarLocal((await api('anexarDoDrive', { notaId: j.nota.id, tipo: a.tipo, fileId: a.drive.id, mover: a.mover })).nota);
+      else await enviarArquivo(j.nota.id, a.tipo, a.file);
     }
     await carregar();
     aviso(`Pasta "${nomePasta(j.nota)}" criada.`, 5000);
@@ -654,7 +701,8 @@ function abrirDetalhe(id) {
         return `<li><span class="nome">${rot}</span>
           <span class="chip ${s}">${s === 'ok' ? q + ' arquivo(s)' : s === 'na' ? 'Não se aplica' : 'Falta'}</span>
           <label class="na"><input type="checkbox" data-na="${k}" ${naLista(n).includes(k) ? 'checked' : ''}> Não se aplica</label>
-          <label class="botao sec peq">Anexar<input type="file" data-anexar="${k}" multiple hidden></label></li>`;
+          <label class="botao sec peq">Do computador<input type="file" data-anexar="${k}" multiple hidden></label>
+          <button type="button" class="botao sec peq" data-drive="${k}">Do Drive</button></li>`;
       }).join('')}</ul>
       ${arq(n).xml ? `<p class="rotulo" style="margin-top:8px">XML da NF-e anexado.</p>` : ''}
       <p class="rotulo" id="detStatus" style="min-height:1.5em"></p>
@@ -691,6 +739,18 @@ function abrirDetalhe(id) {
       renderTudo(); abrirDetalhe(id); aviso('Documento anexado.');
     } catch (err) { $('#detStatus').textContent = err.message; }
   });
+  dlg.querySelectorAll('[data-drive]').forEach(b => b.onclick = async () => {
+    const tipo = b.dataset.drive;
+    const r = await escolherDoDrive({ titulo: 'Escolher ' + DOCS.find(d => d[0] === tipo)[1].toLowerCase() });
+    if (!r) return;
+    try {
+      for (let i = 0; i < r.arquivos.length; i++) {
+        $('#detStatus').textContent = `${r.mover ? 'Movendo' : 'Copiando'} ${r.arquivos[i].nome}…`;
+        atualizarLocal((await api('anexarDoDrive', { notaId: id, tipo, fileId: r.arquivos[i].id, mover: r.mover })).nota);
+      }
+      renderTudo(); abrirDetalhe(id); aviso(`${r.arquivos.length} arquivo(s) anexado(s).`);
+    } catch (err) { $('#detStatus').textContent = err.message; renderTudo(); }
+  });
   dlg.querySelector('#btSalvarDet').onclick = async e => {
     const nova = Object.assign({ id }, lerCampos(f, 'd_'));
     if (!nova.empresa) return aviso('Informe o nome da empresa para a pasta.');
@@ -703,6 +763,81 @@ function abrirDetalhe(id) {
     } catch (err) { $('#detStatus').textContent = err.message; e.target.disabled = false; }
   };
   if (!dlg.open) dlg.showModal();
+}
+
+/* ---------- Navegador do Drive ---------- */
+function iconeArquivo(tipo, nome) {
+  if (/pdf/.test(tipo)) return '📄';
+  if (/image/.test(tipo)) return '🖼️';
+  if (/xml/.test(tipo) || ehXml(nome)) return '🧾';
+  if (/spreadsheet|excel/.test(tipo)) return '📊';
+  return '📎';
+}
+function escolherDoDrive({ titulo }) {
+  return new Promise(resolve => {
+    const dlg = $('#drive');
+    const sel = new Map();
+    let trilha = [{ id: '', nome: 'Meu Drive' }];
+    let atalhos = [];
+    let resolvido = false;
+    const fim = valor => { if (resolvido) return; resolvido = true; resolve(valor); if (dlg.open) dlg.close(); };
+
+    dlg.innerHTML = `
+      <div class="cab"><div><h3>${esc(titulo)}</h3><span class="rotulo">Clique nas pastas para abrir e marque os arquivos.</span></div>
+        <button class="botao sec peq" data-fechar>Cancelar</button></div>
+      <div class="corpo">
+        <div class="atalhos" id="drvAtalhos"></div>
+        <form class="busca-drive" id="drvBusca"><input type="search" placeholder="Buscar arquivo pelo nome em todo o Drive" aria-label="Buscar no Drive"><button class="botao peq">Buscar</button></form>
+        <div class="trilha" id="drvTrilha"></div>
+        <ul class="lista-drive" id="drvLista"><li class="vazio">Carregando…</li></ul>
+      </div>
+      <div class="rodape">
+        <label class="mover"><input type="checkbox" id="drvMover"> Mover em vez de copiar (o arquivo sai do lugar original)</label>
+        <button class="botao" id="drvOk" disabled>Escolher</button>
+      </div>`;
+    dlg.querySelector('[data-fechar]').onclick = () => fim(null);
+    dlg.onclose = () => fim(null);
+    const atualizarOk = () => {
+      const b = $('#drvOk'); b.disabled = !sel.size;
+      b.textContent = sel.size > 1 ? `Escolher ${sel.size} arquivos` : 'Escolher';
+    };
+    $('#drvOk').onclick = () => fim({ arquivos: [...sel.values()], mover: $('#drvMover').checked });
+
+    async function abrir(params, novaTrilha) {
+      const lista = $('#drvLista');
+      lista.innerHTML = '<li class="vazio">Carregando…</li>';
+      try {
+        const j = await api('driveListar', params);
+        atalhos = j.atalhos;
+        trilha = novaTrilha || [j.atual];
+        $('#drvAtalhos').innerHTML = atalhos.map((a, i) => `<button type="button" data-at="${i}">${esc(a.nome)}</button>`).join('');
+        $('#drvAtalhos').querySelectorAll('[data-at]').forEach(b => b.onclick = () => {
+          const a = atalhos[b.dataset.at]; abrir({ pastaId: a.id }, [a]);
+        });
+        $('#drvTrilha').innerHTML = trilha.map((t, i) => i < trilha.length - 1
+          ? `<button type="button" data-tr="${i}">${esc(t.nome)}</button>` : `<span>${esc(t.nome)}</span>`).join('');
+        $('#drvTrilha').querySelectorAll('[data-tr]').forEach(b => b.onclick = () => {
+          const i = Number(b.dataset.tr); abrir({ pastaId: trilha[i].id }, trilha.slice(0, i + 1));
+        });
+        const itens = j.pastas.map(p => `<li><button type="button" data-pasta="${p.id}" data-nome="${esc(p.nome)}"><span class="ic">📁</span><span class="nm">${esc(p.nome)}</span></button></li>`)
+          .concat(j.arquivos.map(a => `<li class="${sel.has(a.id) ? 'sel' : ''}"><label><input type="checkbox" data-arq="${a.id}" data-nome="${esc(a.nome)}" ${sel.has(a.id) ? 'checked' : ''}>
+            <span class="ic">${iconeArquivo(a.tipo, a.nome)}</span><span class="nm">${esc(a.nome)}</span><small>${esc(a.data)}</small></label></li>`));
+        lista.innerHTML = itens.length ? itens.join('') : '<li class="vazio">Pasta vazia.</li>';
+        lista.querySelectorAll('[data-pasta]').forEach(b => b.onclick = () =>
+          abrir({ pastaId: b.dataset.pasta }, (trilha[0].nome.startsWith('Busca:') ? [] : trilha).concat([{ id: b.dataset.pasta, nome: b.dataset.nome }])));
+        lista.querySelectorAll('[data-arq]').forEach(c => c.onchange = () => {
+          if (c.checked) sel.set(c.dataset.arq, { id: c.dataset.arq, nome: c.dataset.nome }); else sel.delete(c.dataset.arq);
+          c.closest('li').classList.toggle('sel', c.checked); atualizarOk();
+        });
+      } catch (err) { lista.innerHTML = `<li class="vazio erro">${esc(err.message)}</li>`; }
+    }
+    $('#drvBusca').onsubmit = e => {
+      e.preventDefault(); const q = e.target.querySelector('input').value.trim();
+      if (q) abrir({ busca: q });
+    };
+    dlg.showModal();
+    abrir({});
+  });
 }
 
 /* ---------- Inventário ---------- */
