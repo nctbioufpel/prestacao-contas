@@ -704,7 +704,8 @@ function abrirDetalhe(id) {
           <label class="botao sec peq">Do computador<input type="file" data-anexar="${k}" multiple hidden></label>
           <button type="button" class="botao sec peq" data-drive="${k}">Do Drive</button></li>`;
       }).join('')}</ul>
-      ${arq(n).xml ? `<p class="rotulo" style="margin-top:8px">XML da NF-e anexado.</p>` : ''}
+      ${arq(n).xml ? `<p class="rotulo" style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">XML da NF-e anexado.
+        <button type="button" class="botao sec peq" id="btReler">Reler dados do XML</button></p>` : ''}
       <p class="rotulo" id="detStatus" style="min-height:1.5em"></p>
       <form id="formDet">
         <h3 style="margin-top:12px">Local</h3>
@@ -739,6 +740,12 @@ function abrirDetalhe(id) {
       await carregar(); abrirDetalhe(id); aviso('Documento anexado.');
     } catch (err) { $('#detStatus').textContent = err.message; }
   });
+  const btReler = dlg.querySelector('#btReler');
+  if (btReler) btReler.onclick = async () => {
+    btReler.disabled = true; $('#detStatus').textContent = 'Lendo o XML…';
+    try { await api('relerXml', { notaId: id }); await carregar(); abrirDetalhe(id); aviso('Dados atualizados pelo XML.'); }
+    catch (err) { $('#detStatus').textContent = err.message; btReler.disabled = false; }
+  };
   dlg.querySelectorAll('[data-drive]').forEach(b => b.onclick = async () => {
     const tipo = b.dataset.drive;
     const r = await escolherDoDrive({ titulo: 'Escolher ' + DOCS.find(d => d[0] === tipo)[1].toLowerCase() });
