@@ -369,7 +369,7 @@ $('#formLogin').addEventListener('submit', async e => {
   const bt = e.target.querySelector('button'); bt.disabled = true; $('#erroLogin').textContent = '';
   try {
     await api('login');
-    try { localStorage.setItem('pc_senha', SENHA); } catch {}
+    try { sessionStorage.setItem('pc_senha', SENHA); } catch {}
     entrar();
   } catch (err) { $('#erroLogin').textContent = err.message; }
   bt.disabled = false;
@@ -379,7 +379,7 @@ async function entrar() {
   $('#aba-painel').innerHTML = '<p class="vazio">Carregando dados do Drive…</p>';
   try { await carregar(); } catch (err) { $('#aba-painel').innerHTML = `<p class="vazio erro">${esc(err.message)}</p>`; }
 }
-$('#btSair').onclick = () => { try { localStorage.removeItem('pc_senha'); } catch {} location.reload(); };
+$('#btSair').onclick = () => { try { sessionStorage.removeItem('pc_senha'); } catch {} location.reload(); };
 $('#btSync').onclick = async () => {
   const bt = $('#btSync'); bt.disabled = true; bt.textContent = 'Sincronizando…';
   try { const j = await api('sincronizar'); await carregar(); aviso(j.msg, 6000); }
@@ -387,7 +387,10 @@ $('#btSync').onclick = async () => {
   bt.disabled = false; bt.textContent = 'Sincronizar com o Drive';
 };
 (function inicio() {
-  let s = ''; try { s = localStorage.getItem('pc_senha') || ''; } catch {}
+  // apaga a senha que versões antigas deixavam guardada de forma permanente
+  try { localStorage.removeItem('pc_senha'); } catch {}
+  // sessionStorage: a senha vale só enquanto a aba estiver aberta
+  let s = ''; try { s = sessionStorage.getItem('pc_senha') || ''; } catch {}
   if (s) { SENHA = s; api('login').then(entrar).catch(() => {}); }
 })();
 
