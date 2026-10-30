@@ -736,7 +736,7 @@ function abrirDetalhe(id) {
         $('#detStatus').textContent = `Enviando ${files[i].name}…`;
         await enviarArquivo(id, c.dataset.anexar, files[i]);
       }
-      renderTudo(); abrirDetalhe(id); aviso('Documento anexado.');
+      await carregar(); abrirDetalhe(id); aviso('Documento anexado.');
     } catch (err) { $('#detStatus').textContent = err.message; }
   });
   dlg.querySelectorAll('[data-drive]').forEach(b => b.onclick = async () => {
@@ -748,7 +748,7 @@ function abrirDetalhe(id) {
         $('#detStatus').textContent = `${r.mover ? 'Movendo' : 'Copiando'} ${r.arquivos[i].nome}…`;
         atualizarLocal((await api('anexarDoDrive', { notaId: id, tipo, fileId: r.arquivos[i].id, mover: r.mover })).nota);
       }
-      renderTudo(); abrirDetalhe(id); aviso(`${r.arquivos.length} arquivo(s) anexado(s).`);
+      await carregar(); abrirDetalhe(id); aviso(`${r.arquivos.length} arquivo(s) anexado(s).`);
     } catch (err) { $('#detStatus').textContent = err.message; renderTudo(); }
   });
   dlg.querySelector('#btSalvarDet').onclick = async e => {
