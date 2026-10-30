@@ -765,8 +765,7 @@ function abrirDetalhe(id) {
     try {
       const j = await api('atualizarNota', { nota: nova, itens: lerItens(f, 'itensDet') });
       atualizarLocal(j.nota);
-      S.itens = S.itens.filter(i => i.notaId !== id).concat(lerItens(f, 'itensDet').map(i => ({ ...i, notaId: id })));
-      renderTudo(); abrirDetalhe(id); aviso('Alterações salvas.');
+      await carregar(); abrirDetalhe(id); aviso('Alterações salvas.');
     } catch (err) { $('#detStatus').textContent = err.message; e.target.disabled = false; }
   };
   if (!dlg.open) dlg.showModal();
