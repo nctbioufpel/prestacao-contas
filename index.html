@@ -442,13 +442,13 @@ function renderPainel() {
   $('#aba-painel').innerHTML = `
     <h2>Pendências</h2>
     <p class="sub">O que já está documentado e o que ainda falta para a prestação de contas.</p>
+    <div class="projetos">${blocos}</div>
     <div class="bloco prestacao">
       <h3>Prestação de contas nas plataformas <small>${aPrestar.length} nota(s) a prestar (${contagem})</small></h3>
       ${aPrestar.length ? `<p class="sub" style="margin-bottom:12px">Marque “Prestada” assim que lançar a nota na plataforma do projeto. Para desfazer, abra a nota.</p>
         <div class="rolagem"><table><thead><tr><th>Baixa</th><th>Projeto</th><th>Tipo</th><th>Nota</th><th>Data</th><th class="num">Valor</th></tr></thead><tbody>${linhasPrestar}</tbody></table></div>`
         : '<p class="vazio">Todas as notas já foram prestadas nas plataformas.</p>'}
     </div>
-    <div class="projetos">${blocos}</div>
     <div class="bloco">
       <h3>Notas com documento faltando (${pend.length})</h3>
       ${pend.length ? `<div class="rolagem"><table><thead><tr><th>Projeto</th><th>Pasta</th><th>Nota</th><th class="num">Valor</th><th>Falta</th></tr></thead><tbody>${linhas}</tbody></table></div>`
