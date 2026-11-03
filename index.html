@@ -866,13 +866,15 @@ function lerPedido() {
   const itens = [...f.querySelectorAll('#itensPed tbody tr')].map(tr => {
     const [d, q] = tr.querySelectorAll('input'); return { descricao: d.value.trim(), qtde: q.value.trim() };
   }).filter(i => i.descricao);
-  return { id: PED.editId, empresa: f.querySelector('[name=empresa]').value.trim(), data: $('#dataPed').value, itens };
+  const proj = f.querySelector('[name=projetoPed]:checked');
+  return { id: PED.editId, projeto: proj ? proj.value : '', empresa: f.querySelector('[name=empresa]').value.trim(), data: $('#dataPed').value, itens };
 }
 function atualizarEmail() { $('#txtEmail').value = textoEmail(lerPedido().itens); }
 function limparPedido() {
   PED.editId = null;
   const f = $('#formPed');
   f.querySelector('[name=empresa]').value = '';
+  f.querySelectorAll('[name=projetoPed]').forEach(r => r.checked = false);
   f.querySelector('#itensPed tbody').innerHTML = linhaPed({}) + linhaPed({}) + linhaPed({});
   $('#dataPed').value = hojeISO();
   $('#avisoEdicao').classList.add('oculto');
@@ -884,6 +886,7 @@ function editarPedido(id) {
   PED.editId = id;
   const f = $('#formPed');
   f.querySelector('[name=empresa]').value = p.empresa;
+  f.querySelectorAll('[name=projetoPed]').forEach(r => r.checked = r.value === p.projeto);
   f.querySelector('#itensPed tbody').innerHTML = itensDoPedido(p).map(linhaPed).join('') + linhaPed({});
   $('#dataPed').value = p.data;
   $('#avisoEdicao').textContent = `Editando o pedido de ${p.empresa}, feito em ${dataBR(p.data)}.`;
@@ -906,6 +909,8 @@ function renderPedidos() {
       <form class="bloco" id="formPed">
         <h3>Novo pedido</h3>
         <div id="avisoEdicao" class="editando oculto"></div>
+        <span class="rotulo">Projeto</span>
+        <div class="escolha">${PROJETOS.map(p => `<label><input type="radio" name="projetoPed" value="${p}"><span>${p}</span></label>`).join('')}</div>
         <div class="grade">
           <label class="campo">Empresa<input name="empresa" list="dlEmpresas" placeholder="Escolha da lista ou digite uma empresa nova" required></label>
           <label class="campo">Data do pedido<input type="date" id="dataPed" required></label>
@@ -941,6 +946,7 @@ function renderPedidos() {
     f.onsubmit = async e => {
       e.preventDefault();
       const pedido = lerPedido();
+      if (!pedido.projeto) return aviso('Escolha o projeto do pedido (CNPq ou FAPERGS).');
       if (!pedido.empresa) return aviso('Informe a empresa.');
       if (!pedido.itens.length) return aviso('Inclua pelo menos um item.');
       const bt = $('#btSalvarPed'); bt.disabled = true;
@@ -966,19 +972,20 @@ function renderPedidos() {
   const recebidos = S.pedidos.filter(p => p.status === 'recebido').sort((a, b) => String(b.recebidoEm).localeCompare(String(a.recebidoEm)));
   const itensHtml = p => `<ul class="pedido-itens">${itensDoPedido(p).map(i => `<li>${esc(i.descricao)}${i.qtde ? ` <small>(${esc(i.qtde)})</small>` : ''}</li>`).join('')}</ul>`;
 
-  $('#listaPed').innerHTML = `<h3>Aguardando chegada (${abertos.length})</h3>` + (abertos.length
+  const porProj = PROJETOS.map(pr => `${pr}: ${abertos.filter(p => p.projeto === pr).length}`).join(', ');
+  $('#listaPed').innerHTML = `<h3>Aguardando chegada (${abertos.length}) <small class="rotulo" style="font-weight:500">${porProj}</small></h3>` + (abertos.length
     ? `<p class="sub" style="margin-bottom:12px">Marque “Chegou” quando o material for entregue. O pedido sai desta lista e vai para os recebidos.</p>
-      <div class="rolagem"><table><thead><tr><th>Baixa</th><th>Data</th><th>Empresa</th><th>Itens</th><th></th></tr></thead><tbody>
+      <div class="rolagem"><table><thead><tr><th>Baixa</th><th>Projeto</th><th>Data</th><th>Empresa</th><th>Itens</th><th></th></tr></thead><tbody>
       ${abertos.map(p => `<tr><td class="chegou"><label><input type="checkbox" data-chegou="${p.id}"> Chegou</label></td>
-        <td>${dataBR(p.data)}</td><td>${esc(p.empresa)}</td><td>${itensHtml(p)}</td>
+        <td>${esc(p.projeto || '–')}</td><td>${dataBR(p.data)}</td><td>${esc(p.empresa)}</td><td>${itensHtml(p)}</td>
         <td><div class="acoes-linha" style="margin:0"><button type="button" class="botao sec peq" data-editar="${p.id}">Editar</button>
         <button type="button" class="botao sec peq" data-email="${p.id}">Copiar e-mail</button></div></td></tr>`).join('')}
       </tbody></table></div>`
     : '<p class="vazio">Nenhum pedido aguardando chegada.</p>');
 
   $('#recebPed').innerHTML = `<summary>Pedidos recebidos (${recebidos.length})</summary>` + (recebidos.length
-    ? `<div class="rolagem"><table><thead><tr><th>Pedido</th><th>Chegou em</th><th>Empresa</th><th>Itens</th><th></th></tr></thead><tbody>
-      ${recebidos.map(p => `<tr><td>${dataBR(p.data)}</td><td>${dataBR(p.recebidoEm)}</td><td>${esc(p.empresa)}</td><td>${itensHtml(p)}</td>
+    ? `<div class="rolagem"><table><thead><tr><th>Projeto</th><th>Pedido</th><th>Chegou em</th><th>Empresa</th><th>Itens</th><th></th></tr></thead><tbody>
+      ${recebidos.map(p => `<tr><td>${esc(p.projeto || '–')}</td><td>${dataBR(p.data)}</td><td>${dataBR(p.recebidoEm)}</td><td>${esc(p.empresa)}</td><td>${itensHtml(p)}</td>
         <td><button type="button" class="botao sec peq" data-desfazer="${p.id}">Desfazer baixa</button></td></tr>`).join('')}
       </tbody></table></div>`
     : '<p class="vazio">Nenhum pedido recebido ainda.</p>');
