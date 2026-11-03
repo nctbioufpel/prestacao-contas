@@ -866,7 +866,7 @@ function lerPedido() {
   const itens = [...f.querySelectorAll('#itensPed tbody tr')].map(tr => {
     const [d, q] = tr.querySelectorAll('input'); return { descricao: d.value.trim(), qtde: q.value.trim() };
   }).filter(i => i.descricao);
-  return { id: PED.editId, empresa: f.querySelector('[name=empresa]').value.trim(), itens };
+  return { id: PED.editId, empresa: f.querySelector('[name=empresa]').value.trim(), data: $('#dataPed').value, itens };
 }
 function atualizarEmail() { $('#txtEmail').value = textoEmail(lerPedido().itens); }
 function limparPedido() {
@@ -874,7 +874,7 @@ function limparPedido() {
   const f = $('#formPed');
   f.querySelector('[name=empresa]').value = '';
   f.querySelector('#itensPed tbody').innerHTML = linhaPed({}) + linhaPed({}) + linhaPed({});
-  $('#dataPed').value = dataBR(hojeISO());
+  $('#dataPed').value = hojeISO();
   $('#avisoEdicao').classList.add('oculto');
   $('#btSalvarPed').textContent = 'Salvar pedido';
   atualizarEmail();
@@ -885,7 +885,7 @@ function editarPedido(id) {
   const f = $('#formPed');
   f.querySelector('[name=empresa]').value = p.empresa;
   f.querySelector('#itensPed tbody').innerHTML = itensDoPedido(p).map(linhaPed).join('') + linhaPed({});
-  $('#dataPed').value = dataBR(p.data);
+  $('#dataPed').value = p.data;
   $('#avisoEdicao').textContent = `Editando o pedido de ${p.empresa}, feito em ${dataBR(p.data)}.`;
   $('#avisoEdicao').classList.remove('oculto');
   $('#btSalvarPed').textContent = 'Salvar alterações';
@@ -908,7 +908,7 @@ function renderPedidos() {
         <div id="avisoEdicao" class="editando oculto"></div>
         <div class="grade">
           <label class="campo">Empresa<input name="empresa" list="dlEmpresas" placeholder="Escolha da lista ou digite uma empresa nova" required></label>
-          <label class="campo">Data do pedido<input id="dataPed" readonly tabindex="-1"></label>
+          <label class="campo">Data do pedido<input type="date" id="dataPed" required></label>
         </div>
         <span class="rotulo">Itens</span>
         <div class="rolagem"><table class="itens" id="itensPed"><thead><tr><th>Descrição do item</th><th>Qtde</th><th></th></tr></thead><tbody></tbody></table></div>
