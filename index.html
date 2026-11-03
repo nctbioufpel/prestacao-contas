@@ -163,6 +163,17 @@ td.num { text-align: right; white-space: nowrap; }
 .docs li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--linha); }
 .docs li .nome { flex: 1; min-width: 140px; font-weight: 600; }
 
+/* ---------- Pedidos ---------- */
+.pedido-itens { margin: 0; padding-left: 18px; }
+.pedido-itens li { margin: 2px 0; }
+#txtEmail { width: 100%; min-height: 260px; padding: 12px; border: 1px solid var(--linha); border-radius: 8px; background: var(--fundo); font: inherit; line-height: 1.55; resize: vertical; }
+.acoes-linha { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+details.recebidos summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+details.recebidos[open] summary { margin-bottom: 12px; }
+td.chegou label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-weight: 600; color: var(--vinho); font-size: 14px; white-space: nowrap; }
+td.chegou input { width: 18px; height: 18px; accent-color: var(--vinho); cursor: pointer; }
+.editando { background: var(--vinho-claro); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+
 /* ---------- Navegador do Drive ---------- */
 #drive { width: min(720px, 96vw); }
 .atalhos { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -256,12 +267,14 @@ dialog .rodape { padding: 14px 22px; border-top: 1px solid var(--linha); display
   </header>
   <nav class="abas" role="tablist">
     <button role="tab" data-aba="painel" aria-selected="true">Pendências</button>
+    <button role="tab" data-aba="pedidos">Pedidos</button>
     <button role="tab" data-aba="notas">Notas</button>
     <button role="tab" data-aba="nova">Nova nota</button>
     <button role="tab" data-aba="inventario">Inventário</button>
   </nav>
   <main>
     <section id="aba-painel"></section>
+    <section id="aba-pedidos" class="oculto"></section>
     <section id="aba-notas" class="oculto"></section>
     <section id="aba-nova" class="oculto"></section>
     <section id="aba-inventario" class="oculto"></section>
@@ -292,7 +305,7 @@ const DOCS = [['nf', 'Nota fiscal'], ['boleto', 'Boleto'], ['comprovante', 'Comp
 const DOC_CURTO = { nf: 'NF', boleto: 'Boleto', comprovante: 'Comprovante', orcamento: 'Orçamentos', carta: 'Carta' };
 
 let SENHA = '';
-const S = { notas: [], itens: [], periodos: [], semNota: [] };
+const S = { notas: [], itens: [], periodos: [], semNota: [], pedidos: [] };
 
 /* ---------- Utilidades ---------- */
 const $ = s => document.querySelector(s);
@@ -349,7 +362,7 @@ async function api(action, dados = {}) {
 }
 async function carregar() {
   const j = await api('listar');
-  Object.assign(S, { notas: j.notas, itens: j.itens, periodos: j.periodos, semNota: j.semNota });
+  Object.assign(S, { notas: j.notas, itens: j.itens, periodos: j.periodos, semNota: j.semNota, pedidos: j.pedidos || [] });
   renderTudo();
 }
 async function enviarArquivo(notaId, tipo, file) {
@@ -401,7 +414,7 @@ function abrirAba(nome) {
   document.querySelectorAll('main > section').forEach(s => s.classList.toggle('oculto', s.id !== 'aba-' + nome));
   if (nome === 'nova' && !NOVA.iniciada) renderNova();
 }
-function renderTudo() { renderPainel(); renderNotas(); renderInventario(); if (NOVA.iniciada) atualizarCaminhoNova(); }
+function renderTudo() { renderPainel(); renderPedidos(); renderNotas(); renderInventario(); if (NOVA.iniciada) atualizarCaminhoNova(); }
 
 /* ---------- Painel de pendências ---------- */
 function renderPainel() {
@@ -833,6 +846,158 @@ function abrirDetalhe(id) {
     } catch (err) { $('#detStatus').textContent = err.message; e.target.disabled = false; }
   };
   if (!dlg.open) dlg.showModal();
+}
+
+/* ---------- Pedidos ---------- */
+const PED = { editId: null };
+const itensDoPedido = p => { try { return JSON.parse(p.itens || '[]'); } catch { return []; } };
+const hojeISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const unicos = lista => [...new Set(lista.map(x => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt'));
+const linhaPed = it => `<tr><td><input list="dlItensPed" value="${esc(it.descricao)}" aria-label="Item" placeholder="Escolha da lista ou digite um item novo"></td>
+  <td class="q"><input value="${esc(it.qtde ?? '')}" aria-label="Quantidade" placeholder="Ex.: 2"></td>
+  <td class="x"><button type="button" class="remover" aria-label="Remover item">×</button></td></tr>`;
+
+function textoEmail(itens) {
+  const lista = itens.map((i, k) => `${k + 1}. ${i.descricao}${i.qtde ? ` (quantidade: ${i.qtde})` : ''}`).join('\n');
+  return `Prezados,\n\nSolicito orçamento para os itens descritos abaixo:\n\n${lista || '(inclua os itens)'}\n\nAtenciosamente,\nNCTBio, Faculdade de Odontologia UFPel`;
+}
+function lerPedido() {
+  const f = $('#formPed');
+  const itens = [...f.querySelectorAll('#itensPed tbody tr')].map(tr => {
+    const [d, q] = tr.querySelectorAll('input'); return { descricao: d.value.trim(), qtde: q.value.trim() };
+  }).filter(i => i.descricao);
+  return { id: PED.editId, empresa: f.querySelector('[name=empresa]').value.trim(), itens };
+}
+function atualizarEmail() { $('#txtEmail').value = textoEmail(lerPedido().itens); }
+function limparPedido() {
+  PED.editId = null;
+  const f = $('#formPed');
+  f.querySelector('[name=empresa]').value = '';
+  f.querySelector('#itensPed tbody').innerHTML = linhaPed({}) + linhaPed({}) + linhaPed({});
+  $('#dataPed').value = dataBR(hojeISO());
+  $('#avisoEdicao').classList.add('oculto');
+  $('#btSalvarPed').textContent = 'Salvar pedido';
+  atualizarEmail();
+}
+function editarPedido(id) {
+  const p = S.pedidos.find(x => x.id === id); if (!p) return;
+  PED.editId = id;
+  const f = $('#formPed');
+  f.querySelector('[name=empresa]').value = p.empresa;
+  f.querySelector('#itensPed tbody').innerHTML = itensDoPedido(p).map(linhaPed).join('') + linhaPed({});
+  $('#dataPed').value = dataBR(p.data);
+  $('#avisoEdicao').textContent = `Editando o pedido de ${p.empresa}, feito em ${dataBR(p.data)}.`;
+  $('#avisoEdicao').classList.remove('oculto');
+  $('#btSalvarPed').textContent = 'Salvar alterações';
+  atualizarEmail();
+  f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+async function copiarTexto(txt) {
+  try { await navigator.clipboard.writeText(txt); }
+  catch { const t = $('#txtEmail'); t.value = txt; t.select(); document.execCommand('copy'); }
+  aviso('Texto copiado. É só colar no e-mail.');
+}
+
+function renderPedidos() {
+  const el = $('#aba-pedidos');
+  if (!el.dataset.pronto) {
+    el.innerHTML = `<h2>Pedidos</h2>
+      <p class="sub">Registre os pedidos de material, gere o texto do e-mail de orçamento e dê baixa quando o material chegar.</p>
+      <form class="bloco" id="formPed">
+        <h3>Novo pedido</h3>
+        <div id="avisoEdicao" class="editando oculto"></div>
+        <div class="grade">
+          <label class="campo">Empresa<input name="empresa" list="dlEmpresas" placeholder="Escolha da lista ou digite uma empresa nova" required></label>
+          <label class="campo">Data do pedido<input id="dataPed" readonly tabindex="-1"></label>
+        </div>
+        <span class="rotulo">Itens</span>
+        <div class="rolagem"><table class="itens" id="itensPed"><thead><tr><th>Descrição do item</th><th>Qtde</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="acoes-linha">
+          <button type="button" class="botao sec peq" id="btAddPed">Adicionar item</button>
+        </div>
+        <datalist id="dlEmpresas"></datalist><datalist id="dlItensPed"></datalist>
+        <h3 style="margin-top:20px">Texto para o e-mail</h3>
+        <textarea id="txtEmail" readonly aria-label="Texto para o e-mail"></textarea>
+        <div class="acoes-linha">
+          <button type="button" class="botao sec peq" id="btCopiar">Copiar texto</button>
+          <a class="botao sec peq" id="btMailto" href="#">Abrir no e-mail</a>
+          <span style="flex:1"></span>
+          <button type="button" class="botao sec" id="btLimparPed">Limpar</button>
+          <button class="botao" id="btSalvarPed">Salvar pedido</button>
+        </div>
+      </form>
+      <div class="bloco" id="listaPed"></div>
+      <div class="bloco"><details class="recebidos" id="recebPed"></details></div>`;
+    const f = $('#formPed');
+    f.addEventListener('input', atualizarEmail);
+    f.addEventListener('click', e => { if (e.target.classList.contains('remover')) { e.target.closest('tr').remove(); atualizarEmail(); } });
+    $('#btAddPed').onclick = () => { f.querySelector('#itensPed tbody').insertAdjacentHTML('beforeend', linhaPed({})); f.querySelector('#itensPed tbody tr:last-child input').focus(); };
+    $('#btLimparPed').onclick = limparPedido;
+    $('#btCopiar').onclick = () => copiarTexto($('#txtEmail').value);
+    $('#btMailto').onclick = e => {
+      e.preventDefault();
+      location.href = `mailto:?subject=${encodeURIComponent('Solicitação de orçamento')}&body=${encodeURIComponent($('#txtEmail').value)}`;
+    };
+    f.onsubmit = async e => {
+      e.preventDefault();
+      const pedido = lerPedido();
+      if (!pedido.empresa) return aviso('Informe a empresa.');
+      if (!pedido.itens.length) return aviso('Inclua pelo menos um item.');
+      const bt = $('#btSalvarPed'); bt.disabled = true;
+      try {
+        const j = await api('salvarPedido', { pedido });
+        const i = S.pedidos.findIndex(p => p.id === j.pedido.id);
+        if (i >= 0) S.pedidos[i] = j.pedido; else S.pedidos.push(j.pedido);
+        aviso(PED.editId ? 'Pedido atualizado.' : `Pedido para ${j.pedido.empresa} salvo.`);
+        limparPedido(); renderPedidos();
+      } catch (err) { aviso(err.message, 6000); }
+      bt.disabled = false;
+    };
+    el.dataset.pronto = 1;
+    limparPedido();
+  }
+  // sugestões: empresas e itens que já existem no site
+  $('#dlEmpresas').innerHTML = unicos(S.notas.flatMap(n => [n.empresa, n.razaoSocial]).concat(S.pedidos.map(p => p.empresa)))
+    .map(v => `<option value="${esc(v)}">`).join('');
+  $('#dlItensPed').innerHTML = unicos(S.itens.map(i => i.descricao).concat(S.pedidos.flatMap(p => itensDoPedido(p).map(i => i.descricao))))
+    .map(v => `<option value="${esc(v)}">`).join('');
+
+  const abertos = S.pedidos.filter(p => p.status !== 'recebido').sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  const recebidos = S.pedidos.filter(p => p.status === 'recebido').sort((a, b) => String(b.recebidoEm).localeCompare(String(a.recebidoEm)));
+  const itensHtml = p => `<ul class="pedido-itens">${itensDoPedido(p).map(i => `<li>${esc(i.descricao)}${i.qtde ? ` <small>(${esc(i.qtde)})</small>` : ''}</li>`).join('')}</ul>`;
+
+  $('#listaPed').innerHTML = `<h3>Aguardando chegada (${abertos.length})</h3>` + (abertos.length
+    ? `<p class="sub" style="margin-bottom:12px">Marque “Chegou” quando o material for entregue. O pedido sai desta lista e vai para os recebidos.</p>
+      <div class="rolagem"><table><thead><tr><th>Baixa</th><th>Data</th><th>Empresa</th><th>Itens</th><th></th></tr></thead><tbody>
+      ${abertos.map(p => `<tr><td class="chegou"><label><input type="checkbox" data-chegou="${p.id}"> Chegou</label></td>
+        <td>${dataBR(p.data)}</td><td>${esc(p.empresa)}</td><td>${itensHtml(p)}</td>
+        <td><div class="acoes-linha" style="margin:0"><button type="button" class="botao sec peq" data-editar="${p.id}">Editar</button>
+        <button type="button" class="botao sec peq" data-email="${p.id}">Copiar e-mail</button></div></td></tr>`).join('')}
+      </tbody></table></div>`
+    : '<p class="vazio">Nenhum pedido aguardando chegada.</p>');
+
+  $('#recebPed').innerHTML = `<summary>Pedidos recebidos (${recebidos.length})</summary>` + (recebidos.length
+    ? `<div class="rolagem"><table><thead><tr><th>Pedido</th><th>Chegou em</th><th>Empresa</th><th>Itens</th><th></th></tr></thead><tbody>
+      ${recebidos.map(p => `<tr><td>${dataBR(p.data)}</td><td>${dataBR(p.recebidoEm)}</td><td>${esc(p.empresa)}</td><td>${itensHtml(p)}</td>
+        <td><button type="button" class="botao sec peq" data-desfazer="${p.id}">Desfazer baixa</button></td></tr>`).join('')}
+      </tbody></table></div>`
+    : '<p class="vazio">Nenhum pedido recebido ainda.</p>');
+
+  const baixa = async (id, recebido, alvo) => {
+    alvo.disabled = true;
+    try {
+      const j = await api('receberPedido', { pedidoId: id, recebido });
+      const i = S.pedidos.findIndex(p => p.id === id); S.pedidos[i] = j.pedido;
+      renderPedidos();
+      aviso(recebido ? `Baixa registrada: pedido de ${j.pedido.empresa}.` : 'Baixa desfeita. O pedido voltou para a lista.');
+    } catch (err) { alvo.disabled = false; if (alvo.type === 'checkbox') alvo.checked = !recebido; aviso(err.message, 6000); }
+  };
+  $('#listaPed').querySelectorAll('[data-chegou]').forEach(c => c.onchange = () => { c.closest('tr').style.opacity = .35; baixa(c.dataset.chegou, true, c); });
+  $('#listaPed').querySelectorAll('[data-editar]').forEach(b => b.onclick = () => editarPedido(b.dataset.editar));
+  $('#listaPed').querySelectorAll('[data-email]').forEach(b => b.onclick = () => {
+    const p = S.pedidos.find(x => x.id === b.dataset.email); copiarTexto(textoEmail(itensDoPedido(p)));
+  });
+  $('#recebPed').querySelectorAll('[data-desfazer]').forEach(b => b.onclick = () => baixa(b.dataset.desfazer, false, b));
 }
 
 /* ---------- Navegador do Drive ---------- */
