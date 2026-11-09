@@ -857,9 +857,14 @@ const linhaPed = it => `<tr><td><input list="dlItensPed" value="${esc(it.descric
   <td class="q"><input value="${esc(it.qtde ?? '')}" aria-label="Quantidade" placeholder="Ex.: 2"></td>
   <td class="x"><button type="button" class="remover" aria-label="Remover item">×</button></td></tr>`;
 
+// saudação conforme o relógio do computador
+function saudacao() {
+  const h = new Date().getHours();
+  return h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite';
+}
 function textoEmail(itens) {
   const lista = itens.map((i, k) => `${k + 1}. ${i.descricao}${i.qtde ? ` (quantidade: ${i.qtde})` : ''}`).join('\n');
-  return `Prezados,\n\nSolicito orçamento para os itens descritos abaixo:\n\n${lista || '(inclua os itens)'}\n\nAtenciosamente,\nNCTBio, Faculdade de Odontologia UFPel`;
+  return `Prezados, ${saudacao()}!\n\nSolicito orçamento para os itens descritos abaixo:\n\n${lista || '(inclua os itens)'}\n\nGrato,`;
 }
 function lerPedido() {
   const f = $('#formPed');
@@ -938,9 +943,10 @@ function renderPedidos() {
     f.addEventListener('click', e => { if (e.target.classList.contains('remover')) { e.target.closest('tr').remove(); atualizarEmail(); } });
     $('#btAddPed').onclick = () => { f.querySelector('#itensPed tbody').insertAdjacentHTML('beforeend', linhaPed({})); f.querySelector('#itensPed tbody tr:last-child input').focus(); };
     $('#btLimparPed').onclick = limparPedido;
-    $('#btCopiar').onclick = () => copiarTexto($('#txtEmail').value);
+    $('#btCopiar').onclick = () => { atualizarEmail(); copiarTexto($('#txtEmail').value); };
     $('#btMailto').onclick = e => {
       e.preventDefault();
+      atualizarEmail();
       location.href = `mailto:?subject=${encodeURIComponent('Solicitação de orçamento')}&body=${encodeURIComponent($('#txtEmail').value)}`;
     };
     f.onsubmit = async e => {
